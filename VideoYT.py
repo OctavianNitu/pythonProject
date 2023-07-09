@@ -10,8 +10,11 @@ from selenium.webdriver.support.wait import WebDriverWait
 import requests
 import sounddevice as sd
 import soundfile as sf
+import soundcard as sc
+import librosa
 
 
+######### Testare conexioune internet
 def conexiune():
     if requests.get('https://google.com/'):
         return True
@@ -23,6 +26,7 @@ class YouTube:
     def __init__(self):
         self.browser = webdriver.Chrome()
 
+    ####### Metoda pentru rularea videoclipului random
     def openYouTube(self):
         self.browser.get("https://www.youtube.com/")
         self.browser.maximize_window()
@@ -53,6 +57,7 @@ class YouTube:
         # except:
         #     print("nu vede bara de SEARCH")
 
+    ######### Metoda pentru inregisstrarea video
     def record_video(self):
 
         # display screen resolution, get it using pyautogui itself
@@ -86,32 +91,77 @@ class YouTube:
         cv2.destroyAllWindows()
         out.release()
 
-    def record_audio(self):
+    ######## Metoda pentru inregistrarea audio a microfonului
+    def record_mic(self):
 
         # Set the audio settings
         sample_rate = 44100  # Sample rate in Hz
         duration = 5  # Duration of the recording in seconds
 
         # Record the audio
-        print("Recording audio ...")
+        print("Recording microphone ...")
         audio = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1)
 
         # Wait for the recording to complete
         sd.wait()
 
         # Save the audio to a file
-        filename = "audio.wav"
+        filename = "mic.wav"
         sf.write(filename, audio, sample_rate)
 
         print(f"Recording saved to {filename}")
 
+    ######### Metoda pentru inregistrare desktop
+
+    def record_audio(self):
+
+        filename = "audio.wav"
+        samplerate = 441000
+        duration = 5
+
+        print("Recording audio from desktop ...")
+
+        with sc.get_microphone(id=str(sc.default_speaker().name), include_loopback=True).recorder(
+                samplerate=samplerate) as mic:
+            data = mic.record(numframes=samplerate * duration)
+            sf.write(file=filename, data=data[:, 0], samplerate=samplerate)
+
+        print(f"Recording saved to {filename}")
+
+    ########## Metoda pentru analiza audio
+    def analiza_audio(self):
+
+        # Load the audio file
+        audio_file = r'C:\Users\nitut\PycharmProjects\pythonProject\mic.wav'
+        audio, sr = librosa.load(audio_file, sr=None)
+
+        # Calculate the root mean square (RMS) energy
+        rms = librosa.feature.rms(y=audio)
+
+        # Convert RMS to dB
+        rms_db = librosa.amplitude_to_db(rms, ref=np.max)
+
+        # Get the average dB value
+        average_db = np.mean(rms_db)
+
+        print("Average dB level:", average_db)
+
+        filename = "VALORIdB.txt"
+        with open(filename, 'w') as file:
+            # Convert each element to string and write to file
+            for element in rms_db:
+                file.write(str(element) + '\n')
+
+######### De aici incepe rularea programuli:
 
 if conexiune():
 
     site = YouTube()
-    site.openYouTube()
-    site.record_video()
-    site.record_audio()
+    # site.openYouTube()
+    # site.record_video()
+    site.record_mic()
+    # site.record_audio()
+    site.analiza_audio()
     input("Nu mai exista instructiuni, apasa ENTER pentru a inchide pagina")
 
 else:
