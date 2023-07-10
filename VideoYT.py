@@ -1,3 +1,4 @@
+import threading
 import cv2
 import numpy as np
 import pyautogui
@@ -25,7 +26,7 @@ def conexiune():
 class YouTube:
     def __init__(self):
         self.browser = webdriver.Chrome()
-
+        self.samplerate = 44100
     ####### Metoda pentru rularea videoclipului random
     def openYouTube(self):
         self.browser.get("https://www.youtube.com/")
@@ -116,15 +117,14 @@ class YouTube:
     def record_audio(self):
 
         filename = "audio.wav"
-        samplerate = 441000
+        # samplerate = 441000
         duration = 5
 
         print("Recording audio from desktop ...")
 
-        with sc.get_microphone(id=str(sc.default_speaker().name), include_loopback=True).recorder(
-                samplerate=samplerate) as mic:
-            data = mic.record(numframes=samplerate * duration)
-            sf.write(file=filename, data=data[:, 0], samplerate=samplerate)
+        with sc.get_microphone(id=str(sc.default_speaker().name),include_loopback=True).recorder(samplerate=self.samplerate) as mic:
+            data = mic.record(numframes=self.samplerate * duration)
+        sf.write(file=filename, data=data[:, 0], samplerate=self.samplerate)
 
         print(f"Recording saved to {filename}")
 
@@ -157,12 +157,27 @@ class YouTube:
 if conexiune():
 
     site = YouTube()
-    # site.openYouTube()
-    # site.record_video()
-    site.record_mic()
+
+
+    site.openYouTube()
+
+    # # site.record_video()
+    # site.record_mic()
     # site.record_audio()
+
+    video_thread = threading.Thread(target=site.record_video)
+    audio_thread = threading.Thread(target=site.record_audio)
+    mic_thread = threading.Thread(target=site.record_mic)
+
+    video_thread.start()
+    audio_thread.start()
+    mic_thread.start()
+
+    video_thread.join()
+    audio_thread.join()
+    mic_thread.join()
+
     site.analiza_audio()
     input("Nu mai exista instructiuni, apasa ENTER pentru a inchide pagina")
-
 else:
     print("Nu se conecteaza la Internet")
